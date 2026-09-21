@@ -36,9 +36,8 @@ index = pc.Index(host=PINECONE_INDEX_HOST) if (pc and PINECONE_INDEX_HOST) else 
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 EMBEDDING_MODELS = [
-    "gemini-embedding-001",
     "gemini-embedding-2",
-    "gemini-embedding-2-preview"
+    "gemini-embedding-001"
 ]
 
 GEMINI_GENERATIVE_MODELS = [

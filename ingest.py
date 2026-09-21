@@ -232,13 +232,12 @@ def chunk_text(text: str, chunk_size: int = 800, chunk_overlap: int = 60) -> Lis
 
 
 EMBEDDING_MODELS = [
-    "gemini-embedding-001",
     "gemini-embedding-2",
-    "gemini-embedding-2-preview"
+    "gemini-embedding-001"
 ]
 
 
-def get_embeddings_fast(texts: List[str], max_retries: int = 6) -> List[List[float]]:
+def get_embeddings_fast(texts: List[str], max_retries: int = 5) -> List[List[float]]:
     if not texts:
         return []
         
@@ -256,16 +255,15 @@ def get_embeddings_fast(texts: List[str], max_retries: int = 6) -> List[List[flo
                 return [e.values for e in response.embeddings]
             except Exception as e:
                 err_str = str(e)
-                # If 429 rate limit / quota exceeded, sleep longer with jitter
                 if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                    wait_time = 5.0 * (attempt + 1)
-                    logger.warning(f"Rate limit (429) on {model_name} (attempt {attempt + 1}/{max_retries}). Backing off for {wait_time:.1f}s...")
+                    wait_time = 4.0 * (attempt + 1)
+                    logger.warning(f"Rate limit (429) on {model_name} (attempt {attempt + 1}/{max_retries}). Switching/backing off for {wait_time:.1f}s...")
+                    time.sleep(wait_time)
                 else:
-                    wait_time = 2.0 * (attempt + 1)
-                    logger.warning(f"Embedding attempt {attempt + 1}/{max_retries} with {model_name} failed ({err_str[:60]}). Retrying in {wait_time:.1f}s...")
-                time.sleep(wait_time)
+                    logger.warning(f"Embedding attempt {attempt + 1}/{max_retries} with {model_name} failed: {err_str[:60]}.")
+                    break  # Move to next model immediately on non-429 error
                 
-    raise RuntimeError(f"Critical: Failed to generate embeddings across available models after {max_retries} attempts.")
+    raise RuntimeError(f"Critical: Embedding quota temporarily exhausted across Google endpoints. Please retry in a few seconds.")
 
 
 def ingest_file(file_path: str, batch_size: int = 32, progress_callback: Optional[Callable[[float], None]] = None, *args, **kwargs):
