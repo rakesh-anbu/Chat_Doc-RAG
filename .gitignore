@@ -1,0 +1,23 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Project Data & Uploads
+data/
+*.log
+.system_generated/
+
+# OS & IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
