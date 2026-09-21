@@ -28,16 +28,23 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+# Check Streamlit Cloud st.secrets
+try:
+    import streamlit as _st
+    if hasattr(_st, "secrets"):
+        for _k in ["GEMINI_API_KEY", "GROQ_API_KEY", "PINECONE_API_KEY", "PINECONE_INDEX_HOST"]:
+            if _k in _st.secrets and not os.getenv(_k):
+                os.environ[_k] = str(_st.secrets[_k])
+except Exception:
+    pass
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_HOST = os.getenv("PINECONE_INDEX_HOST")
 
-if not GEMINI_API_KEY or not PINECONE_API_KEY or not PINECONE_INDEX_HOST:
-    raise ValueError("Missing environment variables. Check your .env file.")
-
-genai_client = genai.Client(api_key=GEMINI_API_KEY)
-pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(host=PINECONE_INDEX_HOST)
+genai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+pc = Pinecone(api_key=PINECONE_API_KEY) if PINECONE_API_KEY else None
+index = pc.Index(host=PINECONE_INDEX_HOST) if (pc and PINECONE_INDEX_HOST) else None
 
 EMBEDDING_MODEL = "gemini-embedding-001"
 
