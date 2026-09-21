@@ -897,31 +897,30 @@ for msg in st.session_state.messages:
 indexed_docs = list(Path("data").glob("*.*"))
 indexed_docs_count = len(indexed_docs)
 
-if len(st.session_state.messages) < 2:
-    st.markdown("### Suggested Questions")
+# Only show suggested questions after at least one document has been successfully processed
+if indexed_docs_count > 0 and len(st.session_state.messages) < 2:
+    st.markdown("### 💡 Suggested Questions from Your Document")
     
-    if indexed_docs_count == 0:
-        suggestions = [
-            "⚡ How does dual-engine failover operate?",
-            "📄 Supported vector index dimensions?",
-            "🔍 How to configure Pinecone top_k search?"
-        ]
-    else:
-        # Check if we have dynamically generated LLM suggestions stored
-        if st.session_state.get("dynamic_suggestions"):
-            suggestions = st.session_state["dynamic_suggestions"][:3]
+    # If dynamic suggestions haven't been generated yet, generate them on the fly from the active file
+    if not st.session_state.get("dynamic_suggestions"):
+        first_doc = indexed_docs[0]
+        generated_sugs = generate_questions_from_document(str(first_doc), first_doc.name)
+        if generated_sugs:
+            st.session_state["dynamic_suggestions"] = generated_sugs
         else:
-            first_name = indexed_docs[0].name
-            suggestions = [
-                f"Summarize key findings from {first_name}",
-                "List core methodologies in the indexed files",
-                "Extract primary conclusions & data points"
+            first_name = first_doc.name
+            st.session_state["dynamic_suggestions"] = [
+                f"What are the main topics covered in {first_name}?",
+                f"Summarize key data points and findings from {first_name}",
+                f"Extract conclusions & core methodologies in {first_name}"
             ]
+
+    suggestions = st.session_state.get("dynamic_suggestions", [])[:3]
 
     # Render suggestion pills cleanly across equal 3 columns with gap
     st.markdown('<div class="suggestion-container">', unsafe_allow_html=True)
     cols = st.columns(3, gap="small")
-    for idx, question in enumerate(suggestions[:3]):
+    for idx, question in enumerate(suggestions):
         with cols[idx]:
             st.markdown('<div class="suggestion-btn">', unsafe_allow_html=True)
             if st.button(
