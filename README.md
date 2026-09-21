@@ -5,10 +5,13 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/frontend-Streamlit%201.30+-FF4B4B.svg)](https://streamlit.io)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit%20Cloud-00FFA3?style=for-the-badge&logo=streamlit)](https://chatdoc-rag-rakeshanbu.streamlit.app/)
 [![Vector DB](https://img.shields.io/badge/Vector%20DB-Pinecone%20Serverless-00F2FE.svg)](https://www.pinecone.io/)
 [![Google GenAI](https://img.shields.io/badge/LLM-Gemini%202.0%20Flash-4285F4.svg)](https://ai.google.dev/)
 [![Groq LPU](https://img.shields.io/badge/LPU%20Inference-Groq%20Ultra--Fast-F55036.svg)](https://groq.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+### 🌐 [Click Here to Open Live Demo (chatdoc-rag-rakeshanbu.streamlit.app)](https://chatdoc-rag-rakeshanbu.streamlit.app/)
 
 </div>
 
