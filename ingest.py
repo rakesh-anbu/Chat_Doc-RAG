@@ -224,31 +224,44 @@ def chunk_text(text: str, chunk_size: int = 800, chunk_overlap: int = 60) -> Lis
     return chunks
 
 
-def get_embeddings_fast(texts: List[str], max_retries: int = 4) -> List[List[float]]:
+EMBEDDING_MODELS = [
+    "gemini-embedding-001",
+    "gemini-embedding-2",
+    "gemini-embedding-2-preview"
+]
+
+
+def get_embeddings_fast(texts: List[str], max_retries: int = 6) -> List[List[float]]:
     if not texts:
         return []
         
-    for attempt in range(max_retries):
-        try:
-            response = genai_client.models.embed_content(
-                model=EMBEDDING_MODEL,
-                contents=texts,
-                config=types.EmbedContentConfig(
-                    task_type="RETRIEVAL_DOCUMENT",
-                    output_dimensionality=768
+    for model_name in EMBEDDING_MODELS:
+        for attempt in range(max_retries):
+            try:
+                response = genai_client.models.embed_content(
+                    model=model_name,
+                    contents=texts,
+                    config=types.EmbedContentConfig(
+                        task_type="RETRIEVAL_DOCUMENT",
+                        output_dimensionality=768
+                    )
                 )
-            )
-            return [e.values for e in response.embeddings]
-        except Exception as e:
-            err_str = str(e)
-            wait_time = 1.5 * (attempt + 1)
-            logger.warning(f"Embedding attempt {attempt + 1}/{max_retries} failed ({err_str[:60]}). Retrying in {wait_time}s...")
-            time.sleep(wait_time)
-            
-    raise RuntimeError(f"Critical: Failed to generate embeddings after {max_retries} attempts.")
+                return [e.values for e in response.embeddings]
+            except Exception as e:
+                err_str = str(e)
+                # If 429 rate limit / quota exceeded, sleep longer with jitter
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    wait_time = 5.0 * (attempt + 1)
+                    logger.warning(f"Rate limit (429) on {model_name} (attempt {attempt + 1}/{max_retries}). Backing off for {wait_time:.1f}s...")
+                else:
+                    wait_time = 2.0 * (attempt + 1)
+                    logger.warning(f"Embedding attempt {attempt + 1}/{max_retries} with {model_name} failed ({err_str[:60]}). Retrying in {wait_time:.1f}s...")
+                time.sleep(wait_time)
+                
+    raise RuntimeError(f"Critical: Failed to generate embeddings across available models after {max_retries} attempts.")
 
 
-def ingest_file(file_path: str, batch_size: int = 96, progress_callback: Optional[Callable[[float], None]] = None, *args, **kwargs):
+def ingest_file(file_path: str, batch_size: int = 32, progress_callback: Optional[Callable[[float], None]] = None, *args, **kwargs):
     path = Path(file_path)
     if not path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
