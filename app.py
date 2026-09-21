@@ -730,7 +730,7 @@ def process_file_list(files_list):
             
         try:
             start_t = time.time()
-            ingest_file(str(save_path), batch_size=96, progress_callback=update_file_progress)
+            ingest_file(str(save_path), batch_size=32, progress_callback=update_file_progress)
             elapsed = time.time() - start_t
             st.session_state.processed_files.add(filename)
             
