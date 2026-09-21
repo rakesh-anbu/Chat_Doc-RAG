@@ -26,6 +26,15 @@ SUPPORTED_EXTENSIONS = [
 
 load_dotenv()
 
+# Seamlessly synchronize Streamlit Cloud secrets into os.environ if running on cloud
+try:
+    if hasattr(st, "secrets"):
+        for key in ["GEMINI_API_KEY", "GROQ_API_KEY", "PINECONE_API_KEY", "PINECONE_INDEX_HOST"]:
+            if key in st.secrets and not os.getenv(key):
+                os.environ[key] = str(st.secrets[key])
+except Exception:
+    pass
+
 # Initialize Pinecone & check API statuses silently
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")

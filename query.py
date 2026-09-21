@@ -14,17 +14,24 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+# Check Streamlit Cloud st.secrets
+try:
+    import streamlit as _st
+    if hasattr(_st, "secrets"):
+        for _k in ["GEMINI_API_KEY", "GROQ_API_KEY", "PINECONE_API_KEY", "PINECONE_INDEX_HOST"]:
+            if _k in _st.secrets and not os.getenv(_k):
+                os.environ[_k] = str(_st.secrets[_k])
+except Exception:
+    pass
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_HOST = os.getenv("PINECONE_INDEX_HOST")
 
-if not GEMINI_API_KEY or not PINECONE_API_KEY or not PINECONE_INDEX_HOST:
-    raise ValueError("Missing environment variables. Check your .env file.")
-
-genai_client = genai.Client(api_key=GEMINI_API_KEY)
-pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(host=PINECONE_INDEX_HOST)
+genai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+pc = Pinecone(api_key=PINECONE_API_KEY) if PINECONE_API_KEY else None
+index = pc.Index(host=PINECONE_INDEX_HOST) if (pc and PINECONE_INDEX_HOST) else None
 
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
@@ -51,7 +58,10 @@ GROQ_GENERATIVE_MODELS = [
 ]
 
 
-def embed_query_with_retry(query: str, max_retries: int = 3) -> list[float]:
+def embed_query_with_retry(query: str, max_retries: int = 4) -> list[float]:
+    if not genai_client:
+        raise RuntimeError("GEMINI_API_KEY is not configured.")
+        
     for model_name in EMBEDDING_MODELS:
         for attempt in range(max_retries):
             try:
@@ -65,8 +75,9 @@ def embed_query_with_retry(query: str, max_retries: int = 3) -> list[float]:
                 )
                 return response.embeddings[0].values
             except Exception as e:
-                wait_time = 2 ** attempt
-                logger.warning(f"Query embed attempt {attempt + 1} with {model_name} failed: {e}. Retrying in {wait_time}s...")
+                err_str = str(e)
+                wait_time = 3.0 * (attempt + 1) if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) else 1.5 * (attempt + 1)
+                logger.warning(f"Query embed attempt {attempt + 1} with {model_name} failed: {err_str[:60]}. Retrying in {wait_time:.1f}s...")
                 time.sleep(wait_time)
                 
     raise RuntimeError("Critical: Unable to embed query across all models.")
