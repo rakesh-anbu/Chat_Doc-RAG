@@ -691,16 +691,20 @@ def wipe_all_knowledge():
         st.error(f"Error resetting database: {e}")
 
 
+# Prominent Live Ingestion HUD Progress Container
+ingestion_hud = st.empty()
+
+
 def process_file_list(files_list):
     if not files_list:
         return
     
+    # Identify files that haven't completed processing
     new_files = [f for f in files_list if f.name not in st.session_state.processed_files]
     if not new_files:
         return
     
     total_files = len(new_files)
-    status_container = st.empty()
     latest_generated_questions = []
     
     for idx, file_obj in enumerate(new_files, start=1):
@@ -712,22 +716,25 @@ def process_file_list(files_list):
             f.write(file_obj.getbuffer())
             
         def update_file_progress(val):
-            overall_pct = int((((idx - 1) + val) / total_files) * 100)
-            status_container.markdown(f"""
-            <div class="cyber-loader-card">
+            overall_pct = max(5, int((((idx - 1) + val) / total_files) * 100))
+            ingestion_hud.markdown(f"""
+            <div class="cyber-loader-card" style="margin: 12px 0 20px 0; border: 1.5px solid rgba(52, 211, 153, 0.85); box-shadow: 0 0 25px rgba(52, 211, 153, 0.35);">
                 <div class="cyber-loader-inner">
                     <div class="cyber-ring-spinner"></div>
                     <div style="flex: 1;">
-                        <div class="cyber-loader-text">⚡ VECTORIZING DOCUMENT ({idx}/{total_files}): {filename}</div>
-                        <div class="cyber-loader-sub">Pinecone 768-dim Embeddings &bull; {overall_pct}% Completed</div>
+                        <div class="cyber-loader-text" style="font-size: 14px; font-weight: 700;">⚡ VECTORIZING &amp; INDEXING ({idx}/{total_files}): {filename}</div>
+                        <div class="cyber-loader-sub">Generating 768-dim Embeddings &bull; Upserting to Pinecone &bull; <b>{overall_pct}% Completed</b></div>
                     </div>
                 </div>
-                <div class="cyber-progress-track">
-                    <div class="cyber-progress-fill" style="width: {overall_pct}%;"></div>
+                <div class="cyber-progress-track" style="height: 12px; margin-top: 12px; background: rgba(0,0,0,0.6);">
+                    <div class="cyber-progress-fill" style="width: {overall_pct}%; transition: width 0.3s ease;"></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
+        # Initial display so user sees the progress bar immediately
+        update_file_progress(0.05)
+        
         try:
             start_t = time.time()
             ingest_file(str(save_path), batch_size=32, progress_callback=update_file_progress)
@@ -744,18 +751,19 @@ def process_file_list(files_list):
     if latest_generated_questions:
         st.session_state.dynamic_suggestions = latest_generated_questions
         
-    status_container.markdown(f"""
-    <div class="cyber-loader-card" style="border-color: rgba(52, 211, 153, 0.9);">
+    ingestion_hud.markdown(f"""
+    <div class="cyber-loader-card" style="margin: 12px 0 20px 0; border: 1.5px solid #10b981; background: rgba(6, 78, 59, 0.5);">
         <div class="cyber-loader-inner">
-            <span style="font-size: 24px;">✅</span>
-            <div>
-                <div class="cyber-loader-text" style="color: #6ee7b7;">INGESTION COMPLETE</div>
-                <div class="cyber-loader-sub">Successfully indexed {total_files} document(s) into Pinecone Serverless.</div>
+            <span style="font-size: 28px;">✅</span>
+            <div style="flex: 1;">
+                <div class="cyber-loader-text" style="color: #6ee7b7; font-size: 14.5px;">INGESTION &amp; VECTORIZATION COMPLETE</div>
+                <div class="cyber-loader-sub">Successfully indexed {total_files} document(s) into Pinecone Serverless (100% Ready for Neural Q&amp;A).</div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
-    time.sleep(0.9)
+    time.sleep(1.2)
+    ingestion_hud.empty()
     st.rerun()
 
 
